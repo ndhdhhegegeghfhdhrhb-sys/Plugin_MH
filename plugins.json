@@ -1,0 +1,18 @@
+{
+    "version": "1.0.0",
+    "plugins": [
+        {
+            "id": "simple-info",
+            "name": "Simple Info",
+            "version": "1.0.0",
+            "description": "Показывает информацию о текущем треке",
+            "author": "MusicHub Explorer",
+            "icon": "https://raw.githubusercontent.com/ndhdhhegegeghfhdhrhb-sys/Plugin_MH/main/plugins/simple-info/icon.png",
+            "download": "https://raw.githubusercontent.com/ndhdhhegegeghfhdhrhb-sys/Plugin_MH/main/plugins/simple-info/simple-info-v1.0.0.zip",
+            "category": "utils",
+            "updated": "2026-06-23",
+            "permissions": ["storage", "notifications"],
+            "requires": "3.0.0"
+        }
+    ]
+}
