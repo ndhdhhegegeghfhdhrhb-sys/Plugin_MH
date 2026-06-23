@@ -1,0 +1,11 @@
+{
+  "id": "simple-info",
+  "name": "Simple Info",
+  "version": "1.0.0",
+  "description": "Отображает информацию о текущем треке и обложку",
+  "author": "MusicHub Explorer",
+  "icon": "icon.png",
+  "renderer": "popup.html",
+  "permissions": ["storage"],
+  "requires": "3.0.0"
+}

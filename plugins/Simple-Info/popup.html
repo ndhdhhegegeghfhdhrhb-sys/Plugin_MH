@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Info</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .custom-titlebar {
+            position: fixed; top: 0; left: 0; right: 0; height: 38px;
+            background: #141414; display: flex; align-items: center;
+            padding: 0 12px; -webkit-app-region: drag;
+            border-bottom: 1px solid #2a2a2a; z-index: 1000;
+        }
+        .custom-titlebar .title {
+            flex: 1; font-size: 13px; font-weight: 600; color: #ddd;
+            -webkit-app-region: drag;
+        }
+        .custom-titlebar .controls {
+            display: flex; gap: 8px; -webkit-app-region: no-drag;
+        }
+        .custom-titlebar .controls button {
+            background: none; border: none; color: #666; font-size: 14px;
+            cursor: pointer; padding: 2px 6px; border-radius: 4px;
+            transition: all 0.2s; line-height: 1;
+        }
+        .custom-titlebar .controls .close-btn:hover {
+            background: #ff4444; color: #fff;
+        }
+        .container {
+            margin-top: 38px;
+            padding: 24px;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        .cover-art {
+            width: 150px;
+            height: 150px;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            background: #333;
+            object-fit: cover;
+            display: block;
+        }
+        .track-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .track-artist {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        .track-status {
+            font-size: 13px;
+            color: #666;
+            transition: color 0.3s;
+        }
+        .track-status.playing { color: #1DB954; }
+        .track-status.paused { color: #ffaa00; }
+        #close-btn {
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        #close-btn:hover { transform: scale(1.04); }
+        #close-btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div class="custom-titlebar">
+        <span class="title">📊 Simple Info</span>
+        <div class="controls">
+            <button class="close-btn" onclick="window.close()">✕</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <img id="artwork" class="cover-art" src="" alt="Обложка">
+        <div id="trackTitle" class="track-title">—</div>
+        <div id="trackArtist" class="track-artist">—</div>
+        <div id="trackStatus" class="track-status">⏹ Остановлено</div>
+        <button id="close-btn">Закрыть окно</button>
+    </div>
+    
+    <script>
+        // ============================================================
+        // SIMPLE INFO PLUGIN — ИСПОЛЬЗУЕТ onPluginStatus
+        // ============================================================
+        
+        let lastTrackKey = '';
+        let isPlaying = false;
+        const artworkUrl = 'http://127.0.0.1:3456/artwork';
+        
+        // === ОБНОВЛЕНИЕ СТАТУСА ===
+        function updateStatus(playing) {
+            const statusEl = document.getElementById('trackStatus');
+            if (playing) {
+                statusEl.textContent = '▶ Воспроизводится';
+                statusEl.className = 'track-status playing';
+            } else {
+                statusEl.textContent = '⏸ На паузе / Остановлено';
+                statusEl.className = 'track-status paused';
+            }
+        }
+        
+        // === ПОДПИСКА НА СТАТУС ===
+        function initStatusListener() {
+            try {
+                if (window.parent && window.parent.electronAPI) {
+                    // Получаем статус через onPluginStatus
+                    window.parent.electronAPI.onPluginStatus((event, status) => {
+                        console.log('📥 Статус из renderer:', status);
+                        
+                        if (status.isPlaying !== undefined) {
+                            isPlaying = status.isPlaying;
+                            updateStatus(isPlaying);
+                        }
+                        
+                        if (status.accentColor && status.accentColor !== '') {
+                            document.documentElement.style.setProperty('--accent', status.accentColor);
+                            applyAccentColor(status.accentColor);
+                        }
+                    });
+                    
+                    // Запрашиваем текущий статус
+                    window.parent.electronAPI.getPluginStatus?.().then(status => {
+                        if (status) {
+                            if (status.isPlaying !== undefined) {
+                                isPlaying = status.isPlaying;
+                                updateStatus(isPlaying);
+                            }
+                            if (status.accentColor) {
+                                applyAccentColor(status.accentColor);
+                            }
+                        }
+                    }).catch(() => {});
+                }
+            } catch (e) {
+                console.log('⚠️ Не удалось подключиться к статусу renderer');
+            }
+        }
+        
+        // === ПРИМЕНЕНИЕ АКЦЕНТНОГО ЦВЕТА ===
+        function applyAccentColor(color) {
+            document.documentElement.style.setProperty('--accent', color);
+            const rgb = hexToRgb(color);
+            if (rgb) {
+                document.documentElement.style.setProperty('--accent-glow', 
+                    `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
+            }
+        }
+        
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+        
+        // === ПОЛУЧЕНИЕ ДАННЫХ О ТРЕКЕ ===
+        async function updateTrackInfo() {
+            try {
+                const mediaInfo = await window.electronAPI.getMediaFromFiles();
+                
+                if (mediaInfo && mediaInfo.title) {
+                    const trackKey = `${mediaInfo.artist}|${mediaInfo.title}`;
+                    
+                    if (trackKey !== lastTrackKey) {
+                        lastTrackKey = trackKey;
+                        document.getElementById('trackTitle').textContent = mediaInfo.title;
+                        document.getElementById('trackArtist').textContent = mediaInfo.artist || '—';
+                        
+                        // Загружаем обложку
+                        try {
+                            const response = await fetch(artworkUrl);
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                const url = URL.createObjectURL(blob);
+                                const img = document.getElementById('artwork');
+                                img.src = url;
+                                img.onload = () => URL.revokeObjectURL(url);
+                                img.onerror = () => { img.src = ''; };
+                            } else {
+                                document.getElementById('artwork').src = '';
+                            }
+                        } catch (err) {
+                            document.getElementById('artwork').src = '';
+                        }
+                    }
+                } else {
+                    if (lastTrackKey !== '') {
+                        lastTrackKey = '';
+                        document.getElementById('trackTitle').textContent = 'Не играет';
+                        document.getElementById('trackArtist').textContent = '—';
+                        document.getElementById('artwork').src = '';
+                        updateStatus(false);
+                    }
+                }
+            } catch (err) {
+                console.log('Ошибка обновления трека:', err);
+            }
+        }
+        
+        // === ЗАКРЫТИЕ ===
+        document.getElementById('close-btn').addEventListener('click', () => {
+            window.close();
+        });
+        
+        // === ЗАПУСК ===
+        initStatusListener();
+        setInterval(updateTrackInfo, 1000);
+        updateTrackInfo();
+        
+        console.log('📊 Simple Info Plugin loaded (через onPluginStatus)!');
+    </script>
+</body>
+</html>
